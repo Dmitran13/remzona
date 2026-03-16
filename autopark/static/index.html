@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>АвтоПарк — Помощник механика</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    :root {
+      --bg-primary:#1a1a2e; --bg-secondary:#16213e; --bg-card:#0f3460;
+      --accent:#e94560; --accent-hover:#c73652; --text-primary:#ffffff;
+      --text-secondary:#a0aec0; --success:#48bb78; --warning:#f6ad55;
+      --danger:#fc8181; --info:#63b3ed;
+    }
+    * { box-sizing:border-box; }
+    body { background:var(--bg-primary); color:var(--text-primary); font-family:'Segoe UI',sans-serif; font-size:16px; min-height:100vh; margin:0; padding-bottom:80px; }
+    .app-header { background:var(--bg-secondary); padding:16px 20px; border-bottom:2px solid var(--accent); display:flex; align-items:center; gap:12px; position:sticky; top:0; z-index:100; }
+    .app-header h1 { font-size:22px; font-weight:700; margin:0; }
+    .status-dot { width:10px; height:10px; border-radius:50%; background:#888; margin-left:auto; }
+    .status-dot.online { background:var(--success); }
+    .bottom-nav { position:fixed; bottom:0; left:0; right:0; background:var(--bg-secondary); border-top:2px solid var(--bg-card); display:flex; z-index:200; }
+    .nav-btn { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:10px 4px; cursor:pointer; border:none; background:transparent; color:var(--text-secondary); font-size:11px; gap:4px; }
+    .nav-btn i { font-size:22px; }
+    .nav-btn.active { color:var(--accent); }
+    .nav-btn:hover { background:rgba(233,69,96,0.1); }
+    .screen { display:none; padding:16px; max-width:800px; margin:0 auto; }
+    .screen.active { display:block; }
+    .btn-primary { background:var(--accent); color:white; border:none; border-radius:10px; padding:18px 24px; font-size:18px; font-weight:700; cursor:pointer; width:100%; transition:background 0.2s; display:flex; align-items:center; justify-content:center; gap:10px; }
+    .btn-primary:hover { background:var(--accent-hover); }
+    .btn-primary:disabled { background:#555; cursor:not-allowed; }
+    .btn-secondary { background:var(--bg-card); color:white; border:1px solid rgba(255,255,255,0.1); border-radius:10px; padding:14px 20px; font-size:16px; font-weight:600; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; }
+    .btn-blue { background:#2b6cb0; color:white; border:none; border-radius:10px; padding:16px 20px; font-size:17px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; }
+    .btn-danger { background:transparent; color:var(--danger); border:1px solid var(--danger); border-radius:8px; padding:8px 14px; font-size:15px; cursor:pointer; }
+    .input-field { background:var(--bg-card); border:2px solid rgba(255,255,255,0.1); border-radius:10px; color:white; font-size:16px; padding:14px 16px; width:100%; outline:none; transition:border-color 0.2s; }
+    .input-field:focus { border-color:var(--accent); }
+    .input-field::placeholder { color:#888; }
+    .plate-input { height:70px; font-size:28px; font-weight:700; text-align:center; letter-spacing:4px; text-transform:uppercase; }
+    .car-card { background:var(--bg-card); border-radius:12px; padding:20px; margin:16px 0; border-left:4px solid var(--accent); }
+    .car-card h2 { font-size:24px; margin:0 0 8px 0; }
+    .car-card p { margin:4px 0; color:var(--text-secondary); font-size:16px; }
+    .car-card .mileage { font-size:20px; font-weight:700; color:white; }
+    .section-title { font-size:20px; font-weight:700; margin:20px 0 12px 0; display:flex; align-items:center; gap:8px; }
+    .maintenance-row { background:var(--bg-secondary); border-radius:10px; padding:14px 16px; margin-bottom:8px; display:flex; align-items:center; gap:12px; border-left:4px solid transparent; }
+    .maintenance-row.overdue { border-left-color:var(--danger); background:rgba(252,129,129,0.08); }
+    .maintenance-row.warning { border-left-color:var(--warning); background:rgba(246,173,85,0.08); }
+    .maintenance-row.ok { border-left-color:var(--success); }
+    .maintenance-row .name { flex:1; font-size:16px; font-weight:600; }
+    .status-badge { padding:4px 12px; border-radius:20px; font-size:13px; font-weight:700; white-space:nowrap; }
+    .badge-overdue { background:var(--danger); color:#1a1a2e; }
+    .badge-warning { background:var(--warning); color:#1a1a2e; }
+    .badge-ok { background:var(--success); color:#1a1a2e; }
+    .badge-unknown { background:#4a5568; color:white; }
+    .km-info { font-size:13px; color:var(--text-secondary); text-align:right; min-width:80px; }
+    .history-item { background:var(--bg-secondary); border-radius:8px; padding:12px 14px; margin-bottom:6px; display:flex; gap:12px; align-items:flex-start; }
+    .history-item .date-badge { background:var(--bg-card); border-radius:6px; padding:4px 10px; font-size:13px; color:var(--text-secondary); white-space:nowrap; }
+    .history-item .work-info { flex:1; }
+    .history-item .work-name { font-size:15px; font-weight:600; }
+    .history-item .part-info { font-size:13px; color:var(--text-secondary); margin-top:2px; }
+    .quick-questions { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:16px 0; }
+    .quick-btn { background:var(--bg-card); border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:20px 14px; color:white; font-size:15px; font-weight:600; cursor:pointer; text-align:center; display:flex; flex-direction:column; align-items:center; gap:8px; }
+    .quick-btn i { font-size:28px; color:var(--accent); }
+    .quick-btn:hover { background:rgba(15,52,96,0.9); }
+    .answer-block { background:var(--bg-secondary); border-radius:12px; padding:20px; margin-top:16px; border-left:4px solid var(--info); display:none; }
+    .answer-block.visible { display:block; }
+    .answer-text { font-size:16px; line-height:1.6; white-space:pre-wrap; }
+    .answer-sources { margin-top:12px; padding-top:12px; border-top:1px solid rgba(255,255,255,0.1); font-size:13px; color:var(--text-secondary); }
+    .upload-zone { border:2px dashed rgba(255,255,255,0.2); border-radius:12px; padding:40px 20px; text-align:center; cursor:pointer; transition:border-color 0.2s; margin:16px 0; }
+    .upload-zone:hover, .upload-zone.drag-over { border-color:var(--accent); background:rgba(233,69,96,0.05); }
+    .upload-zone i { font-size:48px; color:var(--text-secondary); display:block; margin-bottom:12px; }
+    .upload-zone p { font-size:16px; color:var(--text-secondary); margin:8px 0; }
+    .pdf-item { background:var(--bg-secondary); border-radius:10px; padding:14px 16px; margin-bottom:8px; display:flex; align-items:center; gap:12px; }
+    .pdf-item i { font-size:32px; color:#e53e3e; }
+    .pdf-item .pdf-info { flex:1; }
+    .pdf-item .pdf-name { font-size:16px; font-weight:600; }
+    .pdf-item .pdf-meta { font-size:13px; color:var(--text-secondary); margin-top:3px; }
+    .settings-section { background:var(--bg-secondary); border-radius:12px; padding:20px; margin-bottom:16px; }
+    .settings-section h3 { font-size:18px; font-weight:700; margin:0 0 16px 0; color:var(--info); display:flex; align-items:center; gap:8px; }
+    .field-label { font-size:14px; color:var(--text-secondary); margin-bottom:6px; display:block; }
+    .input-group { position:relative; margin-bottom:14px; }
+    .input-group .toggle-visibility { position:absolute; right:14px; top:50%; transform:translateY(-50%); cursor:pointer; color:var(--text-secondary); background:none; border:none; font-size:16px; }
+    .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:500; align-items:flex-end; justify-content:center; display:none; }
+    .modal-overlay.visible { display:flex; }
+    .modal-sheet { background:var(--bg-secondary); border-radius:20px 20px 0 0; padding:24px 20px; width:100%; max-width:800px; max-height:85vh; overflow-y:auto; }
+    .modal-handle { width:40px; height:4px; background:rgba(255,255,255,0.2); border-radius:2px; margin:0 auto 20px; }
+    .modal-title { font-size:20px; font-weight:700; margin-bottom:16px; }
+    .oem-number { background:var(--bg-card); border-radius:8px; padding:12px 16px; font-size:20px; font-weight:700; font-family:monospace; letter-spacing:2px; margin-bottom:8px; color:var(--info); }
+    .analogue-row { display:flex; align-items:center; gap:12px; padding:10px 14px; background:var(--bg-primary); border-radius:8px; margin-bottom:6px; }
+    .analogue-brand { font-weight:700; font-size:15px; min-width:80px; }
+    .analogue-article { font-family:monospace; font-size:16px; color:var(--info); }
+    .analogue-note { font-size:13px; color:var(--text-secondary); flex:1; }
+    .loader { display:none; text-align:center; padding:30px; }
+    .loader.visible { display:block; }
+    .spinner { width:40px; height:40px; border:4px solid rgba(255,255,255,0.1); border-top-color:var(--accent); border-radius:50%; animation:spin 0.8s linear infinite; margin:0 auto 12px; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    .toast-container { position:fixed; top:80px; right:16px; z-index:1000; display:flex; flex-direction:column; gap:8px; }
+    .toast { background:var(--bg-card); border-radius:10px; padding:12px 16px; font-size:15px; min-width:200px; max-width:300px; animation:slideIn 0.3s ease; border-left:4px solid var(--info); }
+    .toast.success { border-left-color:var(--success); }
+    .toast.error { border-left-color:var(--danger); }
+    .toast.warning { border-left-color:var(--warning); }
+    @keyframes slideIn { from { transform:translateX(100%); opacity:0; } to { transform:translateX(0); opacity:1; } }
+    .autocomplete-list { background:var(--bg-card); border:1px solid rgba(255,255,255,0.1); border-radius:10px; margin-top:4px; overflow:hidden; display:none; }
+    .autocomplete-list.visible { display:block; }
+    .autocomplete-item { padding:14px 16px; font-size:16px; cursor:pointer; border-bottom:1px solid rgba(255,255,255,0.05); }
+    .autocomplete-item:hover { background:rgba(233,69,96,0.1); }
+    .stats-bar { background:var(--bg-card); border-radius:10px; padding:12px 16px; display:flex; justify-content:space-around; margin:12px 0; text-align:center; }
+    .stat-item .value { font-size:22px; font-weight:700; color:var(--accent); }
+    .stat-item .label { font-size:12px; color:var(--text-secondary); margin-top:2px; }
+    .text-muted { color:var(--text-secondary); } .text-danger { color:var(--danger); }
+    .text-success { color:var(--success); } .text-info { color:var(--info); }
+    .hidden { display:none !important; }
+    .fade-in { animation:fadeIn 0.3s ease; }
+    @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+    .empty-state { text-align:center; padding:40px 20px; color:var(--text-secondary); }
+    .empty-state i { font-size:48px; display:block; margin-bottom:12px; opacity:0.5; }
+    .progress-bar-container { background:var(--bg-secondary); border-radius:8px; height:8px; margin:12px 0; overflow:hidden; display:none; }
+    .progress-bar-container.visible { display:block; }
+    .progress-bar { height:100%; background:var(--accent); border-radius:8px; transition:width 0.3s; width:0%; }
+  </style>
+</head>
+<body>
+<header class="app-header">
+  <i class="fas fa-car" style="font-size:24px;color:var(--accent)"></i>
+  <h1>АвтоПарк</h1>
+  <span style="font-size:13px;color:var(--text-secondary)" id="currentPlateHeader"></span>
+  <div class="status-dot" id="statusDot"></div>
+</header>
+<div class="toast-container" id="toastContainer"></div>
+
+<div class="screen active" id="screen-search">
+  <div style="margin-bottom:16px;">
+    <div style="position:relative;">
+      <input type="text" id="plateInput" class="input-field plate-input" placeholder="А 123 БВ 50" maxlength="12" autocomplete="off">
+      <div class="autocomplete-list" id="autocompleteList"></div>
+    </div>
+    <div style="margin-top:12px;">
+      <button class="btn-primary" onclick="searchVehicle()"><i class="fas fa-search"></i> НАЙТИ</button>
+    </div>
+  </div>
+  <div class="loader" id="searchLoader"><div class="spinner"></div><p>Ищем данные...</p></div>
+  <div id="vehicleCard" class="hidden fade-in">
+    <div class="car-card">
+      <h2><i class="fas fa-car" style="color:var(--accent)"></i> <span id="carModel">—</span></h2>
+      <p>Госномер: <strong id="carPlate">—</strong></p>
+      <p>Текущий пробег: <span class="mileage" id="carMileage">—</span></p>
+      <p>Записей в базе: <span id="carHistoryCount">—</span></p>
+    </div>
+    <div class="section-title"><i class="fas fa-wrench" style="color:var(--accent)"></i> Техническое обслуживание</div>
+    <div id="maintenanceList"></div>
+    <div class="section-title"><i class="fas fa-history" style="color:var(--info)"></i> Последние работы</div>
+    <div id="historyList"></div>
+  </div>
+</div>
+
+<div class="screen" id="screen-mechanic">
+  <div id="mechanicCarInfo" class="car-card hidden" style="padding:12px 16px;margin-bottom:16px;">
+    <p style="margin:0;font-size:14px;color:var(--text-secondary)">Выбранный автомобиль:</p>
+    <p style="margin:4px 0 0;font-size:18px;font-weight:700;" id="mechanicCarLabel">—</p>
+  </div>
+  <div class="quick-questions">
+    <button class="quick-btn" onclick="askQuick('Как правильно заменить моторное масло и фильтр? Какой объём и марка масла нужны?')"><i class="fas fa-oil-can"></i>Замена масла</button>
+    <button class="quick-btn" onclick="askQuick('Когда нужно менять ремень ГРМ? Признаки износа и что меняют вместе с ремнём?')"><i class="fas fa-cog"></i>Ремень ГРМ</button>
+    <button class="quick-btn" onclick="askQuick('Диагностика тормозной системы. Признаки износа колодок и дисков.')"><i class="fas fa-stop-circle"></i>Тормоза</button>
+    <button class="quick-btn" onclick="askQuick('Состояние системы охлаждения. Когда менять антифриз? Признаки проблем с помпой.')"><i class="fas fa-thermometer-half"></i>Охлаждение</button>
+    <button class="quick-btn" onclick="askQuick('Диагностика АКБ и генератора. Признаки слабого аккумулятора.')"><i class="fas fa-battery-three-quarters"></i>АКБ/Генератор</button>
+    <button class="quick-btn" onclick="focusCustomQuestion()"><i class="fas fa-question-circle"></i>Свой вопрос</button>
+  </div>
+  <div style="margin-top:8px;">
+    <textarea id="customQuestion" class="input-field" placeholder="Введите свой вопрос..." rows="3" style="resize:none;"></textarea>
+    <button class="btn-primary" style="margin-top:10px;" onclick="askCustomQuestion()"><i class="fas fa-robot"></i> СПРОСИТЬ МЕХАНИКА</button>
+  </div>
+  <div class="loader" id="answerLoader"><div class="spinner"></div><p>Думаю...</p></div>
+  <div class="answer-block" id="answerBlock">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+      <i class="fas fa-robot" style="font-size:24px;color:var(--info)"></i>
+      <strong style="font-size:17px;">Ответ механика</strong>
+    </div>
+    <div class="answer-text" id="answerText"></div>
+    <div class="answer-sources" id="answerSources"></div>
+  </div>
+</div>
+
+<div class="screen" id="screen-manuals">
+  <h2 style="font-size:22px;font-weight:700;margin-bottom:16px;"><i class="fas fa-book" style="color:var(--accent)"></i> База знаний</h2>
+  <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)">
+    <i class="fas fa-file-pdf"></i>
+    <p><strong>Перетащите PDF сюда</strong></p>
+    <p>или нажмите для выбора файла</p>
+    <input type="file" id="fileInput" accept=".pdf" style="display:none" multiple onchange="handleFileSelect(event)">
+  </div>
+  <button class="btn-blue" onclick="document.getElementById('fileInput').click()"><i class="fas fa-plus"></i> ДОБАВИТЬ МАНУАЛ</button>
+  <div style="margin-top:12px;" id="uploadProgress" class="hidden">
+    <p style="font-size:14px;color:var(--text-secondary);" id="uploadProgressText">Индексация...</p>
+    <div class="progress-bar-container visible"><div class="progress-bar" id="progressBar"></div></div>
+  </div>
+  <div class="section-title" style="margin-top:20px;"><i class="fas fa-list" style="color:var(--info)"></i> Загруженные мануалы</div>
+  <div id="pdfList"><div class="loader visible" id="pdfLoader"><div class="spinner"></div></div></div>
+  <div class="stats-bar" id="manualsStats" style="display:none;">
+    <div class="stat-item"><div class="value" id="statFiles">0</div><div class="label">Документов</div></div>
+    <div class="stat-item"><div class="value" id="statChunks">0</div><div class="label">Фрагментов</div></div>
+  </div>
+</div>
+
+<div class="screen" id="screen-settings">
+  <h2 style="font-size:22px;font-weight:700;margin-bottom:16px;"><i class="fas fa-cog" style="color:var(--accent)"></i> Настройки</h2>
+  <div class="settings-section">
+    <h3><i class="fab fa-google"></i> Google Таблица</h3>
+    <label class="field-label">ID таблицы Google Sheets</label>
+    <div class="input-group"><input type="text" id="settingSheetId" class="input-field" placeholder="1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms"></div>
+    <label class="field-label">Название листа</label>
+    <div class="input-group"><input type="text" id="settingSheetTab" class="input-field" placeholder="Sheet1" value="Sheet1"></div>
+    <button class="btn-secondary" style="margin-bottom:10px;" onclick="checkSheets()"><i class="fas fa-plug"></i> ПРОВЕРИТЬ СОЕДИНЕНИЕ</button>
+    <div id="sheetsStatus" style="font-size:14px;padding:8px 0;"></div>
+  </div>
+  <div class="settings-section">
+    <h3><i class="fas fa-robot"></i> AI настройки (Qwen)</h3>
+    <label class="field-label">API ключ Qwen (DashScope)</label>
+    <div class="input-group">
+      <input type="password" id="settingQwenKey" class="input-field" placeholder="sk-xxxxxxxxxxxxxxxxxxxxxxxx" style="padding-right:50px;">
+      <button class="toggle-visibility" onclick="togglePasswordVisibility('settingQwenKey',this)"><i class="fas fa-eye"></i></button>
+    </div>
+    <button class="btn-secondary" style="margin-bottom:10px;" onclick="checkQwen()"><i class="fas fa-check-circle"></i> ПРОВЕРИТЬ КЛЮЧ</button>
+    <div id="qwenStatus" style="font-size:14px;padding:8px 0;"></div>
+  </div>
+  <div class="settings-section">
+    <h3><i class="fas fa-database"></i> Данные</h3>
+    <button class="btn-primary" style="margin-bottom:12px;" onclick="refreshData()"><i class="fas fa-sync-alt"></i> ОБНОВИТЬ ДАННЫЕ ИЗ ТАБЛИЦЫ</button>
+    <div id="refreshStatus" style="font-size:14px;color:var(--text-secondary);"></div>
+  </div>
+  <button class="btn-primary" style="background:#2b6cb0;" onclick="saveSettings()"><i class="fas fa-save"></i> СОХРАНИТЬ НАСТРОЙКИ</button>
+  <p style="text-align:center;margin-top:20px;font-size:13px;color:#555;">АвтоПарк v<span id="appVersion">1.0.0</span></p>
+</div>
+
+<nav class="bottom-nav">
+  <button class="nav-btn active" id="nav-search" onclick="switchScreen('search')"><i class="fas fa-search"></i>ПОИСК</button>
+  <button class="nav-btn" id="nav-mechanic" onclick="switchScreen('mechanic')"><i class="fas fa-comments"></i>МЕХАНИК</button>
+  <button class="nav-btn" id="nav-manuals" onclick="switchScreen('manuals')"><i class="fas fa-book"></i>МАНУАЛЫ</button>
+  <button class="nav-btn" id="nav-settings" onclick="switchScreen('settings')"><i class="fas fa-cog"></i>НАСТРОЙКИ</button>
+</nav>
+
+<div class="modal-overlay" id="partsModal" onclick="closePartsModal(event)">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="partsModalTitle">Артикулы запчасти</div>
+    <div class="loader visible" id="partsLoader"><div class="spinner"></div><p>Ищем артикулы...</p></div>
+    <div id="partsResult" class="hidden">
+      <div style="margin-bottom:16px;">
+        <div class="section-title" style="font-size:16px;margin:0 0 8px 0;"><i class="fas fa-barcode"></i> OEM номера</div>
+        <div id="oemList"></div>
+      </div>
+      <div>
+        <div class="section-title" style="font-size:16px;margin:0 0 8px 0;"><i class="fas fa-exchange-alt"></i> Аналоги</div>
+        <div id="analogueList"></div>
+      </div>
+      <div id="searchTipsBlock" style="margin-top:16px;padding:12px;background:var(--bg-primary);border-radius:8px;display:none;">
+        <p style="font-size:13px;color:var(--text-secondary);margin:0;"><i class="fas fa-lightbulb" style="color:var(--warning);"></i> <span id="searchTipsText"></span></p>
+      </div>
+    </div>
+    <button class="btn-secondary" style="margin-top:16px;" onclick="closePartsModalDirect()">Закрыть</button>
+  </div>
+</div>
+
+<script>
+'use strict';
+const state = { currentPlate:'', currentCarModel:'', currentMileage:null, plates:[], currentScreen:'search' };
+
+function switchScreen(name) {
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById(`screen-${name}`).classList.add('active');
+  document.getElementById(`nav-${name}`).classList.add('active');
+  state.currentScreen = name;
+  if (name==='manuals') loadPDFList();
+  if (name==='mechanic') updateMechanicCarInfo();
+  if (name==='settings') loadCurrentSettings();
+}
+
+function showToast(message, type='info', duration=3000) {
+  const container = document.getElementById('toastContainer');
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.textContent = message;
+  container.appendChild(toast);
+  setTimeout(()=>{ toast.style.opacity='0'; toast.style.transition='opacity 0.3s'; setTimeout(()=>toast.remove(),300); }, duration);
+}
+
+async function loadPlates() {
+  try {
+    const res = await fetch('/api/plates');
+    const data = await res.json();
+    state.plates = data.plates || [];
+  } catch(e) {}
+}
+
+function setupAutocomplete() {
+  const input = document.getElementById('plateInput');
+  const list = document.getElementById('autocompleteList');
+  input.addEventListener('input', ()=>{
+    const val = input.value.toUpperCase().replace(/\s/g,'');
+    if (val.length<1) { list.classList.remove('visible'); return; }
+    const matches = state.plates.filter(p=>p.replace(/\s/g,'').includes(val)).slice(0,8);
+    if (!matches.length) { list.classList.remove('visible'); return; }
+    list.innerHTML = matches.map(p=>`<div class="autocomplete-item" onclick="selectPlate('${p}')">${p}</div>`).join('');
+    list.classList.add('visible');
+  });
+  input.addEventListener('keydown', e=>{ if(e.key==='Enter'){ list.classList.remove('visible'); searchVehicle(); } });
+  document.addEventListener('click', e=>{ if(!input.contains(e.target)&&!list.contains(e.target)) list.classList.remove('visible'); });
+}
+
+function selectPlate(plate) {
+  document.getElementById('plateInput').value = plate;
+  document.getElementById('autocompleteList').classList.remove('visible');
+  searchVehicle();
+}
+
+async function searchVehicle() {
+  const plate = document.getElementById('plateInput').value.trim();
+  if (!plate) { showToast('Введите госномер','warning'); return; }
+  document.getElementById('searchLoader').classList.add('visible');
+  document.getElementById('vehicleCard').classList.add('hidden');
+  document.getElementById('autocompleteList').classList.remove('visible');
+  try {
+    const res = await fetch('/api/vehicle',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({plate})});
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    state.currentPlate = data.plate;
+    state.currentCarModel = data.car_model || '';
+    state.currentMileage = data.current_mileage;
+    document.getElementById('currentPlateHeader').textContent = state.currentPlate ? `| ${state.currentPlate}` : '';
+    document.getElementById('carModel').textContent = data.car_model || 'Неизвестно';
+    document.getElementById('carPlate').textContent = data.plate;
+    document.getElementById('carMileage').textContent = data.current_mileage ? `${data.current_mileage.toLocaleString('ru')} км` : 'Нет данных';
+    document.getElementById('carHistoryCount').textContent = data.history_count || 0;
+    renderMaintenanceList(data.maintenance || []);
+    renderHistoryList(data.last_records || []);
+    document.getElementById('vehicleCard').classList.remove('hidden');
+  } catch(e) { showToast(`Ошибка поиска: ${e.message}`,'error'); }
+  finally { document.getElementById('searchLoader').classList.remove('visible'); }
+}
+
+function renderMaintenanceList(maintenance) {
+  const container = document.getElementById('maintenanceList');
+  if (!maintenance.length) { container.innerHTML='<div class="empty-state"><i class="fas fa-question-circle"></i><p>Нет данных</p></div>'; return; }
+  const statusMap = {
+    overdue:{badge:'badge-overdue',text:'🔴 ПРОСРОЧЕНО',rowClass:'overdue'},
+    warning:{badge:'badge-warning',text:'🟡 СКОРО',rowClass:'warning'},
+    ok:{badge:'badge-ok',text:'🟢 НОРМА',rowClass:'ok'},
+    unknown:{badge:'badge-unknown',text:'⚪ НЕТ ДАННЫХ',rowClass:''}
+  };
+  container.innerHTML = maintenance.map(item=>{
+    const s = statusMap[item.status]||statusMap.unknown;
+    let kmInfo = '';
+    if (item.km_until_next!=null) {
+      kmInfo = item.km_until_next<0
+        ? `<span class="text-danger">-${Math.abs(item.km_until_next).toLocaleString('ru')} км</span>`
+        : `${item.km_until_next.toLocaleString('ru')} км`;
+    }
+    return `<div class="maintenance-row ${s.rowClass}">
+      <div class="name">${item.name}</div>
+      <span class="status-badge ${s.badge}">${s.text}</span>
+      <div class="km-info">${kmInfo}</div>
+      <button class="btn-danger" onclick="openPartsModal('${escapeHtml(item.name)}')">Артикулы</button>
+    </div>`;
+  }).join('');
+}
+
+function renderHistoryList(records) {
+  const container = document.getElementById('historyList');
+  if (!records.length) { container.innerHTML='<div class="empty-state"><i class="fas fa-history"></i><p>История пуста</p></div>'; return; }
+  container.innerHTML = records.map(r=>`
+    <div class="history-item">
+      <div class="date-badge">${r.date||'—'}</div>
+      <div class="work-info">
+        <div class="work-name">${escapeHtml(r.work_type||'—')}</div>
+        ${r.part?`<div class="part-info">${escapeHtml(r.part)}${r.article?` <span style="color:var(--info)">| Арт: ${escapeHtml(r.article)}</span>`:''}</div>`:''}
+      </div>
+      ${r.mileage?`<div style="font-size:13px;color:var(--info);white-space:nowrap;">${r.mileage} км</div>`:''}
+    </div>`).join('');
+}
+
+function updateMechanicCarInfo() {
+  const block = document.getElementById('mechanicCarInfo');
+  if (state.currentPlate) {
+    document.getElementById('mechanicCarLabel').textContent =
+      `${state.currentCarModel||'Автомобиль'} | ${state.currentPlate}${state.currentMileage?' | '+state.currentMileage.toLocaleString('ru')+' км':''}`;
+    block.classList.remove('hidden');
+  } else { block.classList.add('hidden'); }
+}
+
+function focusCustomQuestion() { document.getElementById('customQuestion').focus(); }
+function askQuick(q) { document.getElementById('customQuestion').value=q; askCustomQuestion(); }
+
+async function askCustomQuestion() {
+  const question = document.getElementById('customQuestion').value.trim();
+  if (!question) { showToast('Введите вопрос','warning'); return; }
+  document.getElementById('answerLoader').classList.add('visible');
+  document.getElementById('answerBlock').classList.remove('visible');
+  try {
+    const res = await fetch('/api/ask',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({plate:state.currentPlate||'',question})});
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    document.getElementById('answerText').textContent = data.answer||'Нет ответа';
+    document.getElementById('answerSources').innerHTML = data.sources&&data.sources.length
+      ? '<i class="fas fa-book"></i> Источники: '+data.sources.map(s=>`${escapeHtml(s.filename)}, стр.${s.page}`).join(' | ')
+      : '';
+    document.getElementById('answerBlock').classList.add('visible');
+  } catch(e) { showToast(`Ошибка: ${e.message}`,'error'); }
+  finally { document.getElementById('answerLoader').classList.remove('visible'); }
+}
+
+async function loadPDFList() {
+  document.getElementById('pdfLoader').classList.add('visible');
+  try {
+    const res = await fetch('/api/pdfs');
+    const data = await res.json();
+    const pdfs = data.pdfs||[];
+    const container = document.getElementById('pdfList');
+    if (!pdfs.length) {
+      container.innerHTML='<div class="empty-state"><i class="fas fa-file-pdf"></i><p>Мануалы не загружены</p></div>';
+    } else {
+      container.innerHTML = pdfs.map(pdf=>`
+        <div class="pdf-item">
+          <i class="fas fa-file-pdf"></i>
+          <div class="pdf-info">
+            <div class="pdf-name">${escapeHtml(pdf.filename)}</div>
+            <div class="pdf-meta">${pdf.car_model?escapeHtml(pdf.car_model)+' | ':''}${pdf.size_mb} МБ | ${pdf.chunks>0?pdf.chunks+' фрагментов':'Не проиндексирован'}</div>
+          </div>
+          <button class="btn-danger" onclick="deletePDF('${escapeHtml(pdf.filename)}')"><i class="fas fa-trash"></i></button>
+        </div>`).join('');
+    }
+    const totalChunks = pdfs.reduce((s,p)=>s+(p.chunks||0),0);
+    document.getElementById('statFiles').textContent = pdfs.length;
+    document.getElementById('statChunks').textContent = totalChunks.toLocaleString('ru');
+    document.getElementById('manualsStats').style.display = pdfs.length?'flex':'none';
+  } catch(e) { showToast('Ошибка загрузки списка','error'); }
+  finally { document.getElementById('pdfLoader').classList.remove('visible'); }
+}
+
+function handleDragOver(e) { e.preventDefault(); document.getElementById('uploadZone').classList.add('drag-over'); }
+function handleDragLeave(e) { document.getElementById('uploadZone').classList.remove('drag-over'); }
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('uploadZone').classList.remove('drag-over');
+  const files = Array.from(e.dataTransfer.files).filter(f=>f.name.endsWith('.pdf'));
+  if (files.length) uploadFiles(files);
+}
+function handleFileSelect(e) { const files=Array.from(e.target.files); if(files.length){uploadFiles(files);e.target.value='';} }
+
+async function uploadFiles(files) {
+  const progressBlock=document.getElementById('uploadProgress');
+  const progressText=document.getElementById('uploadProgressText');
+  const progressBar=document.getElementById('progressBar');
+  progressBlock.classList.remove('hidden');
+  for (let i=0;i<files.length;i++) {
+    const file=files[i];
+    progressText.textContent=`Загружаем ${file.name}... (${i+1}/${files.length})`;
+    progressBar.style.width=`${Math.round(i/files.length*100)}%`;
+    const formData=new FormData();
+    formData.append('file',file);
+    try {
+      const res=await fetch('/api/upload-pdf',{method:'POST',body:formData});
+      if (!res.ok){const err=await res.json();showToast(`Ошибка: ${err.detail}`,'error');continue;}
+      const data=await res.json();
+      showToast(`✓ ${file.name}: ${data.chunks} фрагментов`,'success',4000);
+    } catch(e){showToast(`Ошибка загрузки ${file.name}`,'error');}
+  }
+  progressBar.style.width='100%';
+  progressText.textContent='Готово!';
+  setTimeout(()=>{progressBlock.classList.add('hidden');progressBar.style.width='0%';},2000);
+  loadPDFList();
+}
+
+async function deletePDF(filename) {
+  if (!confirm(`Удалить "${filename}"?`)) return;
+  try {
+    await fetch(`/api/pdf/${encodeURIComponent(filename)}`,{method:'DELETE'});
+    showToast(`${filename} удалён`,'success');
+    loadPDFList();
+  } catch(e){showToast(`Ошибка: ${e.message}`,'error');}
+}
+
+async function openPartsModal(partName) {
+  const modal=document.getElementById('partsModal');
+  document.getElementById('partsModalTitle').textContent=`Артикулы: ${partName}`;
+  document.getElementById('partsLoader').classList.add('visible');
+  document.getElementById('partsResult').classList.add('hidden');
+  modal.classList.add('visible');
+  try {
+    const res=await fetch('/api/parts',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({part_name:partName,car_model:state.currentCarModel||''})});
+    const data=await res.json();
+    const oemList=document.getElementById('oemList');
+    oemList.innerHTML=data.oem&&data.oem.length
+      ? data.oem.map(n=>`<div class="oem-number">${escapeHtml(n)}</div>`).join('')
+      : '<p class="text-muted">OEM номера не найдены</p>';
+    const analogueList=document.getElementById('analogueList');
+    analogueList.innerHTML=data.analogues&&data.analogues.length
+      ? data.analogues.map(a=>`<div class="analogue-row"><span class="analogue-brand">${escapeHtml(a.brand||'?')}</span><span class="analogue-article">${escapeHtml(a.article||'?')}</span><span class="analogue-note">${escapeHtml(a.note||'')}</span></div>`).join('')
+      : '<p class="text-muted">Аналоги не найдены</p>';
+    const tipsBlock=document.getElementById('searchTipsBlock');
+    if(data.search_tips){document.getElementById('searchTipsText').textContent=data.search_tips;tipsBlock.style.display='block';}
+    else{tipsBlock.style.display='none';}
+  } catch(e){document.getElementById('oemList').innerHTML=`<p class="text-danger">Ошибка: ${e.message}</p>`;}
+  finally{document.getElementById('partsLoader').classList.remove('visible');document.getElementById('partsResult').classList.remove('hidden');}
+}
+
+function closePartsModal(e){if(e.target===document.getElementById('partsModal'))closePartsModalDirect();}
+function closePartsModalDirect(){document.getElementById('partsModal').classList.remove('visible');}
+
+async function loadCurrentSettings(){
+  try{const res=await fetch('/api/status');const data=await res.json();document.getElementById('appVersion').textContent=data.version||'1.0.0';if(data.sheets_records>0)document.getElementById('refreshStatus').textContent=`Данных в кеше: ${data.sheets_records} записей`;}catch(e){}
+}
+function togglePasswordVisibility(id,btn){const i=document.getElementById(id);const ic=btn.querySelector('i');if(i.type==='password'){i.type='text';ic.className='fas fa-eye-slash';}else{i.type='password';ic.className='fas fa-eye';}}
+
+async function checkSheets(){
+  document.getElementById('sheetsStatus').textContent='Проверяем...';
+  try{const res=await fetch('/api/check-sheets',{method:'POST'});const d=await res.json();document.getElementById('sheetsStatus').innerHTML=d.ok?`<span class="text-success"><i class="fas fa-check-circle"></i> ${d.message}</span>`:`<span class="text-danger"><i class="fas fa-times-circle"></i> ${d.message}</span>`;}
+  catch(e){document.getElementById('sheetsStatus').innerHTML='<span class="text-danger">Ошибка соединения</span>';}
+}
+
+async function checkQwen(){
+  document.getElementById('qwenStatus').textContent='Проверяем...';
+  if(!document.getElementById('settingQwenKey').value.trim()){document.getElementById('qwenStatus').innerHTML='<span class="text-warning">Введите API ключ</span>';return;}
+  try{const res=await fetch('/api/check-qwen',{method:'POST'});const d=await res.json();document.getElementById('qwenStatus').innerHTML=d.ok?`<span class="text-success"><i class="fas fa-check-circle"></i> ${d.message}</span>`:`<span class="text-danger"><i class="fas fa-times-circle"></i> ${d.message}</span>`;}
+  catch(e){document.getElementById('qwenStatus').innerHTML='<span class="text-danger">Ошибка</span>';}
+}
+
+async function saveSettings(){
+  try{
+    const res=await fetch('/api/save-settings',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({qwen_api_key:document.getElementById('settingQwenKey').value.trim(),
+        google_sheet_id:document.getElementById('settingSheetId').value.trim(),
+        google_sheet_tab:document.getElementById('settingSheetTab').value.trim()||'Sheet1'})});
+    if(!res.ok){const e=await res.json();throw new Error(e.detail);}
+    showToast('Настройки сохранены!','success');
+  }catch(e){showToast(`Ошибка: ${e.message}`,'error');}
+}
+
+async function refreshData(){
+  document.getElementById('refreshStatus').textContent='Обновляем...';
+  try{const res=await fetch('/api/refresh',{method:'POST'});const d=await res.json();
+    if(d.status==='ok'){document.getElementById('refreshStatus').innerHTML=`<span class="text-success"><i class="fas fa-check"></i> Обновлено: ${d.records_count} записей в ${d.updated_at}</span>`;showToast(`Загружено ${d.records_count} записей`,'success');}
+    else{document.getElementById('refreshStatus').innerHTML=`<span class="text-danger">Ошибка: ${d.error}</span>`;}
+  }catch(e){document.getElementById('refreshStatus').innerHTML='<span class="text-danger">Ошибка</span>';}
+}
+
+async function checkSystemStatus(){
+  try{const res=await fetch('/api/status');const d=await res.json();const dot=document.getElementById('statusDot');if(d.sheets_ok){dot.classList.add('online');dot.title=`Подключено | ${d.sheets_records} записей`;}else{dot.classList.remove('online');dot.title='Google Sheets не подключён';}}
+  catch(e){document.getElementById('statusDot').classList.remove('online');}
+}
+
+function escapeHtml(text){const d=document.createElement('div');d.appendChild(document.createTextNode(String(text||'')));return d.innerHTML;}
+
+document.addEventListener('DOMContentLoaded',async()=>{
+  setupAutocomplete();
+  await loadPlates();
+  await checkSystemStatus();
+  setInterval(checkSystemStatus,60000);
+  setInterval(loadPlates,5*60*1000);
+});
+</script>
+</body>
+</html>
